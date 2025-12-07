@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/bin/python:*)",
+      "Bash(python3:*)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(tree:*)",
+      "Bash(.venv/bin/pip:*)",
+      "Bash(server/venv/bin/pip list:*)",
+      "Bash(server/.venv/bin/pip list:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
