@@ -1,65 +1,77 @@
-from fastapi import FastAPI
-from typing import Literal, Optional
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Literal, Optional, List
 
 app = FastAPI()
 
-todos = []
+database = []
 
 
-@app.get("/")
+def find_todo(todo_id: int):
+    todo = next((todo for todo in database if todo["id"] == todo_id), None)
+    return todo
+
+
+class Todo(BaseModel):
+    id: int
+    title: str
+    desc: str
+    status: Literal["pending", "done"] = "pending"
+    is_active: bool
+
+
+class TodoCreate(BaseModel):
+    title: str
+    desc: str
+    status: Literal["pending", "done"] = "pending"
+    is_active: Optional[bool] = True
+
+
+class TodoUpdate(BaseModel):
+    title: Optional[str] = None
+    desc: Optional[str] = None
+    status: Optional[Literal["pending", "done"]] = None
+    is_active: Optional[bool] = None
+
+
+@app.get("/todos", status_code=200, response_model=List[Todo])
 def read_todos():
-    active_todo = [todo for todo in todos if todo["is_display"]]
-    return {"todos": active_todo}
+    active_todo = [todo for todo in database if todo["is_active"]]
+    return active_todo
 
 
-@app.post("/")
-def add_todo(title: str, desc: str, status: Literal["pending", "done"]):
-    todos.append(
-        {
-            "id": len(todos) + 1,
-            "title": title,
-            "desc": desc,
-            "status": status,
-            "is_display": True,
-        }
-    )
-    return {"result": "success"}
+@app.post("/todos", status_code=201, response_model=Todo)
+def add_todo(todo: TodoCreate):
+    new_todo = todo.model_dump()  # 把 pydantic class 轉 dicts
+    new_todo["id"] = len(database) if len(database) == 0 else database[-1]["id"] + 1
+    database.append(new_todo)
+    return new_todo
 
 
-@app.get("/items/{todo_id}")
+@app.get("/todos/{todo_id}", response_model=Todo)
 def get_todo_id(todo_id: int):
-    current_todo = [todo for todo in todos if todo["id"] == todo_id]
+    current_todo = find_todo(todo_id)
     if not current_todo:
-        return {"result": "error", "desc": "item not found."}
-    return {current_todo[0]}
+        raise HTTPException(status_code=404, detail="todo not found")
+    return current_todo
 
 
-@app.patch("/")
-def update_todo(
-    todo_id: int,
-    title: Optional[str],
-    desc: Optional[str],
-    status: Optional[Literal["pending", "done"]],
-):
-    current_todo = [todo for todo in todos if todo["id"] == todo_id]
+@app.patch("/todos/{todo_id}", response_model=Todo)
+def update_todo(todo_id: int, todo_update: TodoUpdate):
+    current_todo = find_todo(todo_id)
     if not current_todo:
-        return {"result": "error", "desc": "item not found."}
+        raise HTTPException(status_code=404, detail="todo not found")
 
-    if title:
-        current_todo[0]["title"] = title
-    if desc:
-        current_todo[0]["desc"] = desc
-    if status:
-        current_todo[0]["status"] = status
-    return {"result": "success"}
+    update_todo = todo_update.model_dump(exclude_unset=True)
+    current_todo.update(update_todo)
+
+    return current_todo
 
 
-@app.delete("/{todo_id}")
+@app.delete("/todos/{todo_id}")
 def delete_todo(todo_id: int):
-    current_todo = [
-        todo for todo in todos if todo["id"] == todo_id and todo["is_display"]
-    ]
+    current_todo = find_todo(todo_id)
     if not current_todo:
-        return {"result": "error", "desc": "item not found."}
-    current_todo[0]["is_display"] = False
+        raise HTTPException(status_code=404, detail="todo not found")
+    current_todo["is_active"] = False
     return {"result": "success"}
