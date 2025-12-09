@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal, Optional, List
 
 app = FastAPI()
@@ -13,24 +13,82 @@ def find_todo(todo_id: int):
 
 class Todo(BaseModel):
     id: int
-    title: str
-    desc: str
-    status: Literal["pending", "done"] = "pending"
-    is_active: bool
+    title: str = Field(
+        description="a todo title",
+        title="todo title",
+        examples=["Write a blog to share some new stuff"],
+    )
+    desc: str = Field(
+        description="todo's description",
+        title="todo description",
+        examples=["I need to post a blog on Qiita"],
+    )
+    status: Literal["pending", "done"] = Field(
+        description="to check the todo is pending or done",
+        title="todo's status",
+        examples=["pending", "done"],
+    )
+    is_active: bool = Field(
+        description="is todo displayed or deleted",
+        title="to check if todo is displayed or deleted",
+    )
 
 
 class TodoCreate(BaseModel):
-    title: str
-    desc: str
-    status: Literal["pending", "done"] = "pending"
-    is_active: Optional[bool] = True
+    title: str = Field(
+        min_length=10,
+        max_length=500,
+        description="a todo title",
+        title="todo title",
+        examples=["Write a blog to share some new stuff"],
+    )
+    desc: str = Field(
+        min_length=30,
+        max_length=1000,
+        description="todo's description",
+        title="todo description",
+        examples=["I need to post a blog on Qiita"],
+    )
+    status: Literal["pending", "done"] = Field(
+        default="pending",
+        description="to check the todo is pending or done",
+        title="todo's status",
+        examples=["pending", "done"],
+    )
+    is_active: bool = Field(
+        description="is todo displayed or deleted",
+        title="to check if todo is displayed or deleted",
+    )
 
 
 class TodoUpdate(BaseModel):
-    title: Optional[str] = None
-    desc: Optional[str] = None
-    status: Optional[Literal["pending", "done"]] = None
-    is_active: Optional[bool] = None
+    title: Optional[str] = Field(
+        default=None,
+        min_length=10,
+        max_length=500,
+        description="a todo title",
+        title="todo title",
+        examples=["Write a blog to share some new stuff"],
+    )
+    desc: Optional[str] = Field(
+        default=None,
+        min_length=30,
+        max_length=1000,
+        description="todo's description",
+        title="todo description",
+        examples=["I need to post a blog on Qiita"],
+    )
+    status: Optional[Literal["pending", "done"]] = Field(
+        default=None,
+        description="to check the todo is pending or done",
+        title="todo's status",
+        examples=["pending", "done"],
+    )
+    is_active: Optional[bool] = Field(
+        default=None,
+        description="is todo displayed or deleted",
+        title="to check if todo is displayed or deleted",
+    )
 
 
 @app.get("/todos", response_model=List[Todo])
